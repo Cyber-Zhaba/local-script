@@ -1,7 +1,10 @@
 [project]
-name = "REST API server"
+name = "app"
 version = "0.1.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi>=0.135.3",
+    "uvicorn[standard]>=0.44.0",
+]
