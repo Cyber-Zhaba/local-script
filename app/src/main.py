@@ -5,12 +5,18 @@ import tempfile
 import subprocess
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from fastembed import TextEmbedding
 from fastembed.common.model_description import PoolingType, ModelSource
 
-app = FastAPI(title="LocalScript API")
+app = FastAPI(
+    title="LocalScript API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
@@ -24,6 +30,38 @@ LUA_BEST_PRACTICE = ""
 SYSTEM_PROMPTS = {}
 embedding_model = None
 qdrant_client = None
+
+
+class HealthResponse(BaseModel):
+    status: str
+    ollama: str
+    qdrant: str
+
+
+@app.get("/health", response_model=HealthResponse)
+def health_check():
+    ollama_status = "unavailable"
+    qdrant_status = "unavailable"
+
+    try:
+        httpx.get(f"{OLLAMA_URL}/api/tags", timeout=5.0)
+        ollama_status = "available"
+    except Exception:
+        pass
+
+    try:
+        qdrant_client.get_collections()
+        qdrant_status = "available"
+    except Exception:
+        pass
+
+    status = (
+        "healthy"
+        if ollama_status == "available" and qdrant_status == "available"
+        else "degraded"
+    )
+
+    return HealthResponse(status=status, ollama=ollama_status, qdrant=qdrant_status)
 
 
 class GenerateRequest(BaseModel):
