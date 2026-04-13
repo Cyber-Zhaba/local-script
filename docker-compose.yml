@@ -1,6 +1,46 @@
 services:
-  app:
-    build: app
-    container_name: app
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    restart: always
     ports:
-      - 8000:8000
+      - "6333:6333"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: always
+    volumes:
+      - ./ollama_storage:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  init:
+    build: ./init
+    container_name: app_init
+    volumes:
+      - ./prompts:/examples
+    depends_on:
+      ollama:
+        condition: service_started
+      qdrant:
+        condition: service_started
+
+  app:
+    build: ./app
+    container_name: app
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./prompts:/app/prompts
+    depends_on:
+      init:
+        condition: service_completed_successfully

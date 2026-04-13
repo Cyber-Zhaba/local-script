@@ -1,11 +1,12 @@
 FROM python:3.12-slim
 
-WORKDIR /app
-COPY ./requirements.txt /app
+WORKDIR /init
+
+COPY ./requirements.txt /init
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='intfloat/multilingual-e5-small')"
 
-COPY . /app
+COPY ./init.py /init/init.py
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "init.py"]
