@@ -5,7 +5,7 @@ import tempfile
 import subprocess
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from fastembed import TextEmbedding
@@ -264,3 +264,13 @@ def generate_code(request: GenerateRequest):
         print("[4] Чекер: Ошибок нет. Код валиден.")
 
     return {"result": f"lua{{{code}}}lua"}
+
+
+@app.get("/chat", include_in_schema=False)
+def redirect_to_chat():
+    """
+    Редиректит пользователя с localhost:8000/chat на интерфейс Streamlit (порт 8501).
+    """
+    # Поскольку браузер делает запрос снаружи контейнера, мы перенаправляем
+    # его на localhost:8501 (порт, который мы пробросили для Streamlit)
+    return RedirectResponse(url="http://localhost:8501")

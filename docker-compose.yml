@@ -46,3 +46,13 @@ services:
     depends_on:
       init:
         condition: service_completed_successfully
+
+  chat:
+    build: ./chat
+    container_name: chat
+    restart: always
+    ports:
+      - 8501:8501
+    depends_on:
+      app:
+        condition: service_started
