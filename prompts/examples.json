@@ -1,0 +1,27 @@
+[
+  {
+    "user_request": "Из полученного списка email получи последний.",
+    "context": "{\"wf\": {\"vars\": {\"emails\":[\"user1@example.com\", \"user2@example.com\", \"user3@example.com\"]}}}",
+    "expected_code": "return wf.vars.emails[#wf.vars.emails]"
+  },
+  {
+    "user_request": "Увеличивай значение переменной try_count_n на каждой итерации",
+    "context": "{\"wf\": {\"vars\": {\"try_count_n\": 3}}}",
+    "expected_code": "return wf.vars.try_count_n + 1"
+  },
+  {
+    "user_request": "Для полученных данных из предыдущего REST запроса очисти значения переменных ID, ENTITY_ID, CALL",
+    "context": "Данные лежат в wf.vars.RESTbody.result",
+    "expected_code": "result = wf.vars.RESTbody.result\nfor _, filteredEntry in pairs(result) do\n  for key, value in pairs(filteredEntry) do\n    if key ~= \"ID\" and key ~= \"ENTITY_ID\" and key ~= \"CALL\" then\n      filteredEntry[key] = nil\n    end\n  end\nend\nreturn result"
+  },
+  {
+    "user_request": "Отфильтруй элементы из массива, чтобы включить только те, у которых есть значения в полях Discount или Markdown.",
+    "context": "Массив лежит в wf.vars.parsedCsv",
+    "expected_code": "local result = _utils.array.new()\nlocal items = wf.vars.parsedCsv\n\nfor _, item in ipairs(items) do\n  if (item.Discount ~= \"\" and item.Discount ~= nil) or (item.Markdown ~= \"\" and item.Markdown ~= nil) then\n    table.insert(result, item)\n  end\nend\nreturn result"
+  },
+  {
+    "user_request": "Как преобразовать структуру данных так, чтобы все элементы items в ZCDF_PACKAGES всегда были представлены в виде массивов, даже если они изначально не являются массивами",
+    "context": "Путь к данным: wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES",
+    "expected_code": "function ensureArray(t)\n  if type(t) ~= \"table\" then\n    return {t}\n  end\n  local isArray = true\n  for k, v in pairs(t) do\n    if type(k) ~= \"number\" or math.floor(k) ~= k then\n      isArray = false\n      break\n    end\n  end\n  return isArray and t or {t}\nend\n\nfunction ensureAllItemsAreArrays(objectsArray)\n  if type(objectsArray) ~= \"table\" then\n    return objectsArray\n  end\n  for _, obj in ipairs(objectsArray) do\n    if type(obj) == \"table\" and obj.items then\n      obj.items = ensureArray(obj.items)\n    end\n  end\n  return objectsArray\nend\n\nreturn ensureAllItemsAreArrays(wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES)"
+  }
+]
