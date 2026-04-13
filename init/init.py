@@ -23,7 +23,6 @@ COLLECTION_NAME = "lua_examples"
 
 
 def wait_for_service(url, service_name, timeout=60):
-    """Ждем, пока сервис не начнет отвечать HTTP 200"""
     print(f"Ожидание запуска {service_name} по адресу {url}...")
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -39,7 +38,6 @@ def wait_for_service(url, service_name, timeout=60):
 
 
 def pull_ollama_model():
-    """Скачиваем модель Ollama (если её нет)"""
     print(f"Проверка модели {LLM_MODEL} в Ollama...", flush=True)
     tags_res = requests.get(f"{OLLAMA_URL}/api/tags").json()
     existing_models = [m["name"] for m in tags_res.get("models", [])]
@@ -48,7 +46,7 @@ def pull_ollama_model():
         print(f"[OK] Модель {LLM_MODEL} уже загружена.")
         return
 
-    print(f"Скачивание модели {LLM_MODEL} (это может занять время)...", flush=True)
+    print(f"Скачивание модели {LLM_MODEL} ...", flush=True)
     # stream=False, чтобы дождаться полного скачивания
     pull_res = requests.post(f"{OLLAMA_URL}/api/pull", json={"name": LLM_MODEL})
     if pull_res.status_code == 200:
@@ -58,7 +56,6 @@ def pull_ollama_model():
 
 
 def init_qdrant_db():
-    """Инициализация векторной базы и заливка примеров RAG"""
     print("Подключение к Qdrant...", flush=True)
     client = QdrantClient(url=QDRANT_URL)
 
@@ -109,7 +106,7 @@ def init_qdrant_db():
 
 
 if __name__ == "__main__":
-    print("=== Старт контейнера инициализации (Migrations) ===", flush=True)
+    print("=== Старт контейнера инициализации ===", flush=True)
 
     wait_for_service(OLLAMA_URL, "Ollama")
     pull_ollama_model()
