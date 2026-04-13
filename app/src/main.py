@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import tempfile
 import subprocess
 import httpx
@@ -11,15 +12,16 @@ from fastembed.common.model_description import PoolingType, ModelSource
 
 app = FastAPI(title="LocalScript API")
 
-# Константы (в идеале часть из них перенести в .env)
-OLLAMA_URL = "http://ollama:11434"
-QDRANT_URL = "http://qdrant:6333"
-LLM_MODEL = "qwen2.5-coder:7b-instruct"
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5-coder:7b-instruct")
+
 COLLECTION_NAME = "lua_examples"
 BEST_PRACTICE_PATH = "/app/prompts/LUA_BEST_PRACTICES.md"
+AGENTS_PROMPTS_PATH = "/app/prompts/agents.json"
 
-# Глобальные переменные для загрузки в память
 LUA_BEST_PRACTICE = ""
+SYSTEM_PROMPTS = {}
 embedding_model = None
 qdrant_client = None
 
@@ -28,14 +30,30 @@ class GenerateRequest(BaseModel):
     prompt: str
 
 
-# ==========================================
-# ШАГ 1. Инициализация при старте (Загрузка в ОЗУ)
-# ==========================================
+# =================================
+# ШАГ 1. Инициализация при старте
+# =================================
 @app.on_event("startup")
 def startup_event():
-    global LUA_BEST_PRACTICE, embedding_model, qdrant_client
+    global LUA_BEST_PRACTICE, SYSTEM_PROMPTS, embedding_model, qdrant_client
 
-    print("Загрузка LUA_BEST_PRACTICE в оперативную память...")
+    ascii_art = r"""
+    __                     __          
+   / /   ____  _________ _/ /          
+  / /   / __ \/ ___/ __ `/ /           
+ / /___/ /_/ / /__/ /_/ / /            
+/_____/\____/\___/\__,_/_/             
+   _____           _       __          
+  / ___/__________(_)___  / /_         
+  \__ \/ ___/ ___/ / __ \/ __/         
+ ___/ / /__/ /  / / /_/ / /_           
+/____/\___/_/  /_/ .___/\__/           
+                /_/                    
+    """
+    print(ascii_art, flush=True)
+    print(f"[*] Используемая LLM модель: {LLM_MODEL}", flush=True)
+
+    print("[*] Загрузка LUA_BEST_PRACTICE в оперативную память...")
     try:
         with open(BEST_PRACTICE_PATH, "r", encoding="utf-8") as f:
             LUA_BEST_PRACTICE = f.read()
@@ -45,7 +63,17 @@ def startup_event():
         )
         LUA_BEST_PRACTICE = "Соблюдайте стандартный синтаксис Lua."
 
-    print("Инициализация модели эмбеддингов FastEmbed...")
+    print("[*] Загрузка системных промптов...")
+    try:
+        with open(AGENTS_PROMPTS_PATH, "r", encoding="utf-8") as f:
+            SYSTEM_PROMPTS = json.load(f)
+    except FileNotFoundError:
+        print(
+            f"[ERROR] Файл {AGENTS_PROMPTS_PATH} не найден. Работа агентов невозможна!"
+        )
+        SYSTEM_PROMPTS = {"analyst": "", "coder": "", "fixer": ""}
+
+    print("[*] Инициализация модели эмбеддингов FastEmbed...")
     TextEmbedding.add_custom_model(
         model="intfloat/multilingual-e5-small",
         pooling=PoolingType.MEAN,
@@ -56,7 +84,7 @@ def startup_event():
     )
     embedding_model = TextEmbedding(model_name="intfloat/multilingual-e5-small")
 
-    print("Подключение к Qdrant...")
+    print("[*] Подключение к Qdrant...")
     qdrant_client = QdrantClient(url=QDRANT_URL)
 
 
@@ -75,7 +103,7 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
         "options": {
             "num_ctx": 4096,
             "num_predict": 512,
-            "temperature": 0.1,  # Низкая температура для написания кода и логики
+            "temperature": 0.1,
         },
     }
 
@@ -101,20 +129,13 @@ def extract_lua_code(llm_output: str) -> str:
 
 
 def run_analyst(user_prompt: str) -> str:
-    system_prompt = (
-        "Ты системный аналитик. Твоя задача преобразовать задачу пользователя "
-        "в строгое техническое задание для программиста. "
-        "Опиши 'ВХОДНЫЕ ДАННЫЕ', 'ВЫХОДНЫЕ ДАННЫЕ' и 'ТРЕБОВАНИЯ РЕАЛИЗАЦИИ'. "
-        "Если запрос пользователя неоднозначен, добавь раздел 'УТОЧНЕНИЯ' и напиши вопросы."
-    )
+    system_prompt = SYSTEM_PROMPTS.get("analyst", "Ты системный аналитик.")
     return call_llm(system_prompt, user_prompt)
 
 
 def run_rag_search(tech_spec: str, top: int = 3) -> str:
-    # Генерируем вектор по ТЗ аналитика
     query_vector = list(embedding_model.embed([tech_spec]))[0].tolist()
 
-    # Ищем в базе
     search_response = qdrant_client.query_points(
         collection_name=COLLECTION_NAME, query=query_vector, limit=top
     )
@@ -132,12 +153,7 @@ def run_rag_search(tech_spec: str, top: int = 3) -> str:
 
 
 def run_coder(tech_spec: str, code_examples: str, best_practices: str) -> str:
-    system_prompt = (
-        "Ты senior Lua-разработчик. Твоя задача написать код по Техническому Заданию. "
-        "СТРОГО соблюдай 'LUA BEST PRACTICES' и ориентируйся на переданные примеры (RAG). "
-        "Верни ТОЛЬКО Lua код внутри маркдаун блока ```lua ... ``` без лишних объяснений. "
-        "Если в ТЗ есть раздел 'УТОЧНЕНИЯ', добавь эти вопросы как комментарии в самом начале Lua кода."
-    )
+    system_prompt = SYSTEM_PROMPTS.get("coder", "Ты Lua-разработчик.")
     user_prompt = (
         f"LUA BEST PRACTICES:\n{best_practices}\n\n"
         f"ПОХОЖИЕ ПРИМЕРЫ (RAG):\n{code_examples}\n\n"
@@ -149,40 +165,29 @@ def run_coder(tech_spec: str, code_examples: str, best_practices: str) -> str:
 
 
 def run_style_check(code: str) -> str | None:
-    """
-    Проверка синтаксиса через локальный компилятор luac.
-    Возвращает текст ошибки, либо None если всё отлично.
-    """
     try:
         with tempfile.NamedTemporaryFile(suffix=".lua", delete=False) as tmp:
             tmp.write(code.encode("utf-8"))
             tmp_path = tmp.name
 
-        # Вызываем проверку синтаксиса
         result = subprocess.run(
             ["luac", "-p", tmp_path], capture_output=True, text=True
         )
         os.remove(tmp_path)
 
         if result.returncode != 0:
-            return result.stderr.strip()  # Ошибка синтаксиса
-        return None  # Код валиден
+            return result.stderr.strip()
+        return None
 
     except FileNotFoundError:
-        # Если luac не установлен в контейнере, пропускаем шаг
-        print(
-            "[WARNING] Компилятор 'luac' не найден в системе. Проверка синтаксиса пропущена."
-        )
+        print("[WARNING] Компилятор 'luac' не найден в системе. Проверка пропущена.")
         return None
 
 
 def run_fixer(
     tech_spec: str, code: str, style_error: str, code_examples: str, best_practices: str
 ) -> str:
-    system_prompt = (
-        "Ты Lua-разработчик. Предыдущая версия скрипта выдала синтаксическую ошибку. "
-        "Исправь ошибку и верни ТОЛЬКО исправленный Lua код внутри ```lua ... ```."
-    )
+    system_prompt = SYSTEM_PROMPTS.get("fixer", "Ты Lua-разработчик. Почини код.")
     user_prompt = (
         f"ТЗ:\n{tech_spec}\n\n"
         f"БАЗА ЗНАНИЙ (Ограничения):\n{best_practices}\n\n"
@@ -196,27 +201,28 @@ def run_fixer(
 
 
 # ==========================================
-# ШАГ 2. Хендлер /generate (Только бизнес-логика)
+# ШАГ 2. Хендлер /generate
 # ==========================================
 @app.post("/generate")
 def generate_code(request: GenerateRequest):
-    # 1. Анализируем запрос, получаем ТЗ
+    print(f"\n[?] Новый запрос: {request.prompt}")
+
     tech_spec = run_analyst(request.prompt)
+    print("[1] Аналитик: ТЗ сформировано.")
 
-    # 2. Ищем релевантные примеры в Qdrant
     code_examples = run_rag_search(tech_spec, top=3)
+    print("[2] RAG: Примеры найдены.")
 
-    # 3. Пишем первый вариант кода
     code = run_coder(tech_spec, code_examples, LUA_BEST_PRACTICE)
+    print("[3] Кодер: Первый вариант скрипта написан.")
 
-    # 4. Проверяем код на синтаксические ошибки (детерминированно)
     style_error = run_style_check(code)
 
-    # 5. Если есть ошибка синтаксиса - запускаем фиксера
     if style_error:
-        print(f"[CHECKER FAILED]: Найдена ошибка. Запуск фиксера...\n{style_error}")
+        print(f"[4] Чекер: Найдена синтаксическая ошибка: {style_error}")
         code = run_fixer(tech_spec, code, style_error, code_examples, LUA_BEST_PRACTICE)
+        print("[5] Фиксер: Ошибка исправлена.")
+    else:
+        print("[4] Чекер: Ошибок нет. Код валиден.")
 
-    # Экранируем переносы строк для JSON формата, как просили в PDF
-    # Формат ответа: {"result": "lua{...}lua"}
     return {"result": f"lua{{{code}}}lua"}

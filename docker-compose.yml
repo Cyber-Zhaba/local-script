@@ -25,6 +25,7 @@ services:
   init:
     build: ./init
     container_name: app_init
+    env_file: .env
     volumes:
       - ./prompts:/examples
     depends_on:
@@ -37,6 +38,7 @@ services:
     build: ./app
     container_name: app
     restart: always
+    env_file: .env
     ports:
       - "8000:8000"
     volumes:

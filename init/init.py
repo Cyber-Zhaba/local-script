@@ -18,7 +18,7 @@ TextEmbedding.add_custom_model(
 
 OLLAMA_URL = "http://ollama:11434"
 QDRANT_URL = "http://qdrant:6333"
-LLM_MODEL = "qwen2.5-coder:7b-instruct"
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5-coder:7b-instruct")
 COLLECTION_NAME = "lua_examples"
 
 
@@ -47,7 +47,6 @@ def pull_ollama_model():
         return
 
     print(f"Скачивание модели {LLM_MODEL} ...", flush=True)
-    # stream=False, чтобы дождаться полного скачивания
     pull_res = requests.post(f"{OLLAMA_URL}/api/pull", json={"name": LLM_MODEL})
     if pull_res.status_code == 200:
         print(f"[OK] Модель {LLM_MODEL} успешно скачана!", flush=True)
@@ -59,22 +58,17 @@ def init_qdrant_db():
     print("Подключение к Qdrant...", flush=True)
     client = QdrantClient(url=QDRANT_URL)
 
-    # Проверяем, существует ли коллекция
     if client.collection_exists(COLLECTION_NAME):
         print(f"[OK] Коллекция {COLLECTION_NAME} уже существует.", flush=True)
         return
 
     print(f"Создание коллекции {COLLECTION_NAME}...", flush=True)
-    # Для intfloat/multilingual-e5-small размерность вектора = 384
     client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(size=384, distance=Distance.COSINE),
     )
 
-    # Здесь можно добавить загрузку ваших 8 примеров из json
-    examples_path = (
-        "/examples/examples.json"  # Путь при маппинге volume (см. docker-compose)
-    )
+    examples_path = "/examples/examples.json"
     if os.path.exists(examples_path):
         print("Загрузка эмбеддингов для RAG...")
         embedding_model = TextEmbedding(model_name="intfloat/multilingual-e5-small")
@@ -84,7 +78,6 @@ def init_qdrant_db():
 
         points = []
         for i, ex in enumerate(examples):
-            # Векторизуем запрос пользователя (по нему будем искать)
             vector = list(embedding_model.embed([ex["user_request"]]))[0]
             points.append(
                 PointStruct(
