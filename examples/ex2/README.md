@@ -16,9 +16,9 @@ API `generate` отлично подходит для single-shot интегра
 Выведи список пользователей у которых age < 18 из переменной wf.vars.users
 ```
 
-1. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
+2. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
 
-2. Запустите эмулятор
+3. Запустите эмулятор
 
 ```bash
 cat script.lua | lua5.5 test_runner.lua
@@ -42,9 +42,9 @@ cat script.lua | lua5.5 test_runner.lua
 Окей, теперь отфильтруй у них только поле budget. Верни массив из чисел.
 ```
 
-1. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
+2. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
 
-2. Запустите эмулятор
+3. Запустите эмулятор
 
 ```bash
 cat script.lua | lua5.5 test_runner.lua
@@ -68,9 +68,9 @@ cat script.lua | lua5.5 test_runner.lua
 А теперь просуммируй их бюджеты и верни итоговое число.
 ```
 
-1. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
+2. Скопируйте код внутри блока `lua{ ... }lua` в `script.lua`.
 
-2. Запустите эмулятор
+3. Запустите эмулятор
 
 ```bash
 cat script.lua | lua5.5 test_runner.lua
