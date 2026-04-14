@@ -36,10 +36,11 @@ if prompt := st.chat_input("Опишите, какой Lua-скрипт нужн
 
                 data = response.json()
                 result = data.get("result", "Ошибка: Пустой ответ от сервера")
+                print(result)
 
-                st.markdown(result)
+                st.markdown(f"```lua\n{result}\n```")
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": result}
+                    {"role": "assistant", "content": f"```lua\n{result}\n```"}
                 )
 
             except requests.exceptions.RequestException as e:

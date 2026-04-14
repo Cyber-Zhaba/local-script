@@ -44,15 +44,7 @@ else
 	if type(result) == "table" then
 		for k, v in pairs(result) do
 			if type(v) == "table" then
-				print(
-					"[" .. k .. "]",
-					"Table: name="
-						.. tostring(v.name)
-						.. ", amount="
-						.. tostring(v.amount)
-						.. ", budget="
-						.. tostring(v.budget)
-				)
+				print("[" .. k .. "]", "Table: name=" .. tostring(v.name) .. ", budget=" .. tostring(v.budget))
 			else
 				print("[" .. k .. "]", v)
 			end

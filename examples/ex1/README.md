@@ -28,7 +28,7 @@ curl -s -X POST http://localhost:8000/generate \
 | jq -r '.result' | sed 's/^lua{//; s/}lua$//' | tee script.lua && cat script.lua | lua5.5 ./test_runner.lua
 ```
 
-**Результат:** Код не упадет, но Агент-Аналитик добавит в начало скрипта комментарий: `-- УТОЧНЕНИЯ: Укажите критерий фильтрации (например, больше нуля, четные).`
+**Результат:** Код не упадет, но Агент-Аналитик добавит в начало скрипта комментарий: `-- Условия фильтрации:`
 
 ### Шаг 3. Имитация Human-in-the-Loop
 
@@ -38,7 +38,7 @@ curl -s -X POST http://localhost:8000/generate \
 curl -s -X POST http://localhost:8000/generate \
 -H "Content-Type: application/json" \
 -d '{"prompt": "Отфильтруй массив чисел wf.vars.numbers: оставь только числа больше 10. Строки и nil игнорируй."}' \
-| jq -r '.result' | sed 's/^lua{//; s/}lua$//' | tee script.lua && cat script.lua | lua5.4 ../../test_runner.lua
+| jq -r '.result' | sed 's/^lua{//; s/}lua$//' | tee script.lua && cat script.lua | lua5.5 ./test_runner.lua
 ```
 
 Ожидаемый результат:

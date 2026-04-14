@@ -1,15 +1,10 @@
--- Функция для фильтрации массива чисел, оставляя только те, которые больше 10
-function filterNumbers(numbers)
-  local result = _utils.array.new()
-  
-  for _, number in ipairs(numbers) do
-    if type(number) == "number" and number > 10 then
-      table.insert(result, number)
-    end
-  end
-  
-  return result
+-- Фильтруем список пользователей, оставляя только тех, у кого возраст меньше 18 лет
+local result = {}
+for _, user in ipairs(wf.vars.users) do
+	if type(user.age) == "number" and user.age < 18 then
+		table.insert(result, user)
+	end
 end
 
--- Возврат отфильтрованного массива
-return filterNumbers(wf.vars.numbers)
+-- Возвращаем отфильтрованный список пользователей
+return result
