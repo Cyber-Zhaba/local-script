@@ -1,0 +1,42 @@
+[
+  {
+    "user_request": "Из полученного списка email получи последний.",
+    "context": "{\"wf\": {\"vars\": {\"emails\":[\"user1@example.com\", \"user2@example.com\", \"user3@example.com\"]}}}",
+    "expected_code": "return wf.vars.emails[#wf.vars.emails]"
+  },
+  {
+    "user_request": "Увеличивай значение переменной try_count_n на каждой итерации",
+    "context": "{\"wf\": {\"vars\": {\"try_count_n\": 3}}}",
+    "expected_code": "return wf.vars.try_count_n + 1"
+  },
+  {
+    "user_request": "Для полученных данных из предыдущего REST запроса очисти значения переменных ID, ENTITY_ID, CALL",
+    "context": "Данные лежат в wf.vars.RESTbody.result",
+    "expected_code": "local result = wf.vars.RESTbody.result\nfor _, filteredEntry in pairs(result) do\n  for key, value in pairs(filteredEntry) do\n    if key == \"ID\" or key == \"ENTITY_ID\" or key == \"CALL\" then\n      filteredEntry[key] = nil\n    end\n  end\nend\nreturn result"
+  },
+  {
+    "user_request": "Отфильтруй элементы из массива, чтобы включить только те, у которых есть значения в полях Discount или Markdown.",
+    "context": "Массив лежит в wf.vars.parsedCsv",
+    "expected_code": "local result = _utils.array.new()\nlocal items = wf.vars.parsedCsv\n\nfor _, item in ipairs(items) do\n  if (item.Discount ~= \"\" and item.Discount ~= nil) or (item.Markdown ~= \"\" and item.Markdown ~= nil) then\n    table.insert(result, item)\n  end\nend\nreturn result"
+  },
+  {
+    "user_request": "Как преобразовать структуру данных так, чтобы все элементы items в ZCDF_PACKAGES всегда были представлены в виде массивов, даже если они изначально не являются массивами",
+    "context": "Путь к данным: wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES",
+    "expected_code": "local function ensureArray(t)\n  if type(t) ~= \"table\" then\n    return {t}\n  end\n  local isArray = true\n  for k, v in pairs(t) do\n    if type(k) ~= \"number\" or math.floor(k) ~= k then\n      isArray = false\n      break\n    end\n  end\n  return isArray and t or {t}\nend\n\nlocal function ensureAllItemsAreArrays(objectsArray)\n  if type(objectsArray) ~= \"table\" then\n    return objectsArray\n  end\n  for _, obj in ipairs(objectsArray) do\n    if type(obj) == \"table\" and obj.items then\n      obj.items = ensureArray(obj.items)\n    end\n  end\n  return objectsArray\nend\n\nreturn ensureAllItemsAreArrays(wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES)"
+  },
+  {
+    "user_request": "Преобразуй время из формата ISO 8601 в unix-формат (timestamp в секундах).",
+    "context": "Время лежит в wf.initVariables.recallTime. Использование os.time не рекомендуется из-за миллисекунд и часовых поясов.",
+    "expected_code": "local iso_time = wf.initVariables.recallTime\nlocal days_in_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}\nif not iso_time or not iso_time:match(\"^%d%d%d%d%-%d%d%-%d%dT\") then return nil end\nlocal function is_leap_year(year) return (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0) end\nlocal function days_since_epoch(year, month, day)\n  local days = 0\n  for y = 1970, year - 1 do days = days + (is_leap_year(y) and 366 or 365) end\n  for m = 1, month - 1 do days = days + days_in_month[m]; if m == 2 and is_leap_year(year) then days = days + 1 end end\n  return days + (day - 1)\nend\nlocal function parse_iso8601_to_epoch(iso_str)\n  local year, month, day, hour, min, sec, offset_sign, offset_hour, offset_min = string.match(iso_str, \"(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)%.?%d*([+-])(%d+):(%d+)\")\n  if not year then return nil end\n  year, month, day, hour, min, sec = tonumber(year), tonumber(month), tonumber(day), tonumber(hour), tonumber(min), tonumber(sec)\n  offset_hour, offset_min = tonumber(offset_hour), tonumber(offset_min)\n  local total_days = days_since_epoch(year, month, day)\n  local total_seconds = total_days * 86400 + hour * 3600 + min * 60 + sec\n  local offset_seconds = offset_hour * 3600 + offset_min * 60\n  if offset_sign == \"-\" then offset_seconds = -offset_seconds end\n  return total_seconds - offset_seconds\nend\nreturn parse_iso8601_to_epoch(iso_time)"
+  },
+  {
+    "user_request": "Преобразуй дату из формата 'YYYYMMDD' и время 'HHMMSS' в строку в формате ISO 8601",
+    "context": "Две переменные: wf.vars.json.IDOC.ZCDF_HEAD.DATUM и wf.vars.json.IDOC.ZCDF_HEAD.TIME",
+    "expected_code": "local DATUM = wf.vars.json.IDOC.ZCDF_HEAD.DATUM\nlocal TIME = wf.vars.json.IDOC.ZCDF_HEAD.TIME\nlocal function safe_sub(str, start, finish)\n  local s = string.sub(str, start, math.min(finish, #str))\n  return s ~= \"\" and s or \"00\"\nend\nlocal year = safe_sub(DATUM, 1, 4)\nlocal month = safe_sub(DATUM, 5, 6)\nlocal day = safe_sub(DATUM, 7, 8)\nlocal hour = safe_sub(TIME, 1, 2)\nlocal minute = safe_sub(TIME, 3, 4)\nlocal second = safe_sub(TIME, 5, 6)\nlocal iso_date = string.format('%s-%s-%sT%s:%s:%s.00000Z', year, month, day, hour, minute, second)\nreturn iso_date"
+  },
+  {
+    "user_request": "Добавь переменную с квадратом числа",
+    "context": "Число передается строкой, нужно вернуть таблицу с числом и его квадратом.",
+    "expected_code": "local n_str = '5'\nlocal n = tonumber(n_str)\nreturn { num = n, squared = n * n }"
+  }
+]
