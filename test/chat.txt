@@ -1,44 +1,73 @@
-# Вопрос 6
+# Вопрос 1
 
-Найди самый часто встречающийся email в массиве wf.vars.emails
+Увеличь каждое значение в массиве wf.vars.prices на 10%
 
-Супер. А теперь доработай код так, чтобы он возвращал не весь email, а только имя пользователя (всё, что до символа @)
+А теперь не возвращай массив, а просто верни сумму этих увеличенных цен.
 
-# Вопрос 7
+lua5.4 test_runner.lua
 
-Посчитай скидку 10% от суммы wf.vars.total_price
+# Вопрос 2
 
-Добавь условие: если переменная wf.vars.is_vip равна true, то скидка должна быть 20%, а не 10%.
+Найди самую дорогую транзакцию в wf.vars.transactions
 
-# Вопрос 8
+Верни не просто сумму, а строку вида: Максимальный платеж составил X руб.
 
-Посчитай сумму всех чисел в массиве wf.vars.orders
+lua5.4 test_runner.lua
 
-В массиве могут попадаться nil или строки. Добавь проверку типов (type(x) == 'number'), чтобы скрипт не падал с ошибкой.
+# Вопрос 3
+
+Выведи список доменов у почт из массива wf.vars.emails
+
+lua5.4 test_runner.lua
+
+Найди тот, который встричается чаще всего
+
+lua5.4 test_runner.lua
 
 # Вопрос 9
 
-Отформатируй номер телефона из wf.vars.phone
+В датасете wf.vars.users найди самого старого и самого молодого пользователя
 
-Приведи к международному формату начиная с +7, удали все дефисы и скобки.
+lua5.4 test_runner.lua
+
+Оставь только из имена
+
+lua5.4 test_runner.lua
 
 # Вопрос 10
 
-Очисти значения переменных ID, ENTITY_ID, CALL из результатов RESTbody.result
+Посчитай средний возраст пользователей в wf.vars.users
 
-# VAL 1
-Сложи все суммы чеков из массива wf.vars.receipts
+lua5.4 test_runner.lua
 
-Данные грязные, там могут быть пустые значения nil. Игнорируй их.
+интерактив 
 
-Отлично, теперь примени к итоговой сумме налог 20% и верни результат.
+lua5.4 test_runner.lua
 
-# VAL 2
+ДЕМО 1
 
-Вытащи нужные заказы из списка wf.vars.orders и верни массивом.
+curl -X POST http://localhost:8000/generate -H "Content-Type: application/json" \
+-d '{"prompt": "Найди максимальное число в массиве wf.vars.numbers"}'
 
-Нужны только те, где status == 'delivered'
+curl -s -X POST http://localhost:8000/generate -H "Content-Type: application/json" \
+-d '{"prompt": "Отфильтруй массив чисел wf.vars.numbers"}' \
+| jq -r '.result' | sed 's/^lua{//; s/}lua$//' | tee script.lua && cat script.lua | lua5.4 test_runner.lua
 
-# VAL 3
+curl -s -X POST http://localhost:8000/generate -H "Content-Type: application/json" \
+-d '{"prompt": "Отфильтруй массив wf.vars.numbers: оставь только числа больше 10. Строки и nil игнорируй."}' \
+| jq -r '.result' | sed 's/^lua{//; s/}lua$//' | tee script.lua && cat script.lua | lua5.4 test_runner.lua
 
-Преобразуй время из переменной wf.initVariables.recallTime (формат ISO) в unix-формат (timestamp в секундах).
+# Демо 2
+
+Выведи список пользователей у которых age < 18 из переменной wf.vars.users
+
+lua5.4 test_runner.lua
+
+Окей, теперь отфильтруй у них только поле budget. Верни массив из чисел.
+
+lua5.4 test_runner.lua
+
+А теперь просуммируй их бюджеты и верни итоговое число.
+
+lua5.4 test_runner.lua
+
