@@ -3,20 +3,20 @@
 # 🚀 LocalScript: Локальная мультиагентная система для генерации Lua-кода
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-green)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.135%2B-green)
 ![VRAM](https://img.shields.io/badge/VRAM-%E2%89%A4%208GB-red)
 ![Zero_Leakage](https://img.shields.io/badge/Data_Leakage-0%25-success)
 
 **LocalScript** — это AI-решение для LowCode-платформы (MWS Octapi), работающее **полностью в закрытом контуре**. Оно переводит задачи с естественного языка в готовый к использованию Lua-скрипт, опираясь на корпоративную базу знаний и строгие правила синтаксиса.
 
-## 🛡 Выполнение требований хакатона (Strict Constraints)
+## 🛡 Выполнение требований хакатона
 
 - **Модель:** `qwen2.5-coder:7b-instruct` (квантованная, загружается локально).
 - **Параметры запуска Ollama (фиксированные):** `num_ctx=4096, num_predict=512, batch=1, parallel=1`.
 - **Потребление ресурсов:** Вся генерация выполняется на GPU (без CPU offload). Пиковое потребление **≤ 8.0 GB VRAM**. Эмбеддинги (FastEmbed) и векторная БД (Qdrant) вынесены на CPU.
-- **Внешние API:** Полностью отсутствуют (OpenAI/Anthropic отключены by design).
+- **Внешние API:** Полностью отсутствуют.
 
-## ⚡ Quick Start (Быстрый запуск)
+## ⚡ Quick Start
 
 ### Требования
 
